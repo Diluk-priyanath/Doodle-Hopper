@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Doodle Hopper</title>
+  <style>
+    #game-container {
+      width: 300px;
+      height: 400px;
+      border: 1px solid black;
+      position: relative;
+      margin: 0 auto;
+      background-image: url("888.jpg");
+      background-size: 100% 100%;
+      overflow: hidden;
+    }
+    
+    #player {
+      width: 50px;
+      height: 50px;
+      position: absolute;
+      background-image: url("Screenshot 2023-06-26 104131.png");
+      background-size: 100% 100%;
+    }
+
+    #score-display {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="player"></div>
+    <div id="score-display"></div>
+  </div>
+
+  <div>
+    <label for="name-input" id="label">Enter your name:</label>
+    <input type="text" id="name-input">
+    <button id="start-button">Click Here to start the game</button>
+    <pre><b>Instructions
+             - avoid collisions
+             - use left and right arrow keys to move
+    </b></pre>
+  </div>
+
+  <script>
+    // Get references to HTML elements
+    const gameContainer = document.getElementById('game-container');
+    const player = document.getElementById('player');
+    const scoreDisplay = document.getElementById('score-display');
+    const nameInput = document.getElementById('name-input');
+    const startButton = document.getElementById('start-button');
+    const label = document.getElementById('label');
+
+    // Set initial player position
+    let playerX = 125;
+    let playerY = 350;
+
+    // Set initial game state
+    let isGameOver = false;
+    let score = 0;
+    let playerName = '';
+
+    // Start the game when the button is clicked
+    startButton.addEventListener('click', function() {
+      playerName = nameInput.value;
+      if (playerName.trim() !== '') startGame();
+    });
+
+    // Function to start the game
+    function startGame() {
+      // Hide the name input and start button
+      nameInput.style.display = 'none';
+      startButton.style.display = 'none';
+      label.style.display = 'none';
+
+      // Set up keyboard controls
+      document.addEventListener('keydown', function(event) {
+        if (!isGameOver) {
+          if (event.key === 'ArrowLeft' && playerX > 0) moveLeft();
+          else if (event.key === 'ArrowRight' && playerX < 250) moveRight();
+        }
+      });
+
+      // Game loop
+      function gameLoop() {
+        movePlatforms();
+        checkCollision();
+        if (!isGameOver) requestAnimationFrame(gameLoop);
+      }
+
+      // Function to move the player left
+      function moveLeft() {
+        playerX -= 5;
+        player.style.left = playerX + 'px';
+      }
+
+      // Function to move the player right
+      function moveRight() {
+        playerX += 5;
+        player.style.left = playerX + 'px';
+      }
+
+      // Function to generate random platforms
+      function generatePlatforms() {
+        const platformWidth = 75;
+        const platformHeight = 10;
+        const platformGap = 100;
+        const platformCount = Math.floor(gameContainer.clientHeight / (platformHeight + platformGap));
+        
+        for (let i = 0; i < platformCount; i++) {
+          const platform = document.createElement('div');
+          platform.classList.add('platform');
+          platform.style.width = platformWidth + 'px';
+          platform.style.height = platformHeight + 'px';
+          platform.style.backgroundColor = 'green';
+          platform.style.position = 'absolute';
+          platform.style.left = Math.random() * (gameContainer.clientWidth - platformWidth) + 'px';
+          platform.style.top = (platformHeight + platformGap) * i + 'px';
+          gameContainer.appendChild(platform);
+        }
+      }
+
+      // Function to move platforms downwards
+      function movePlatforms() {
+        const platforms = gameContainer.querySelectorAll('.platform');
+        platforms.forEach(function(platform) {
+          let top = parseInt(platform.style.top);
+          top += 2;
+          if (top > gameContainer.clientHeight) {
+            top = -10;
+            platform.style.left = Math.random() * (gameContainer.clientWidth - parseInt(platform.style.width)) + 'px';
+          }
+          platform.style.top = top + 'px';
+        });
+      }
+
+      // Function to check for collision between player and platforms
+      function checkCollision() {
+        const platforms = gameContainer.querySelectorAll('.platform');
+        platforms.forEach(function(platform) {
+          const playerRect = player.getBoundingClientRect();
+          const platformRect = platform.getBoundingClientRect();
+
+          if (
+            playerRect.bottom >= platformRect.top &&
+            playerRect.top <= platformRect.bottom &&
+            playerRect.right >= platformRect.left &&
+            playerRect.left <= platformRect.right
+          ) {
+              // Player hit the platform from the bottom
+              playerY = platformRect.bottom;
+              player.style.top = playerY + 'px';
+          }
+        });
+
+        // Check if the player fell off the screen
+        if (playerY > gameContainer.clientHeight) gameOver();
+      }
+
+      // Function to increase the score
+      function increaseScore() {
+        score++;
+        scoreDisplay.textContent = playerName + "'s Score: " + score;
+      }
+
+      // Function to end the game
+      function gameOver() {
+        isGameOver = true;
+        clearInterval(scoreInterval); // Stop the score incrementing
+        saveScore();
+        alert('Game Over. Your score: ' + score);
+      }
+
+      // Function to save the score in a text file
+      function saveScore() {
+        const textToSave = playerName + "'s Score: " + score;
+        const filename = 'score.txt';
+        const blob = new Blob([textToSave], { type: 'text/plain' });
+
+        // Create a temporary link element to trigger the file download
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+      }
+
+      // Start the game
+      generatePlatforms();
+      gameLoop();
+
+      // Update the score every second
+      const scoreInterval = setInterval(increaseScore, 1000);
+    }
+  </script>
+</body>
+</html>
